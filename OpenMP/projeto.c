@@ -1,7 +1,9 @@
 # include <stdio.h>
 # include <omp.h>
-# define N 500 // Tamanho da grade
-# define T 1000 // Número de iterações
+#include <math.h>
+
+# define N 2000 // Tamanho da grade
+# define T 500 // Número de iterações
 # define D 0.1  // Coeficiente de difusão
 # define DELTA_T 0.01
 # define DELTA_X 1.0
@@ -10,6 +12,7 @@ int NThreads = 2;
 
 void diff_eq(double C[N][N], double C_new[N][N]) {
     for (int t = 0; t < T; t++) {
+      double difmedio = 0.0;
       #pragma omp parallel num_threads(NThreads)
       {
         #pragma omp for collapse (2)
@@ -20,13 +23,18 @@ void diff_eq(double C[N][N], double C_new[N][N]) {
                 );
             }
         }
-        #pragma omp for collapse (2)
+        
+        #pragma omp for collapse (2) reduction(+:difmedio)
         // Atualizar matriz para a próxima iteração
         for (int i = 1; i < N - 1; i++) {
             for (int j = 1; j < N - 1; j++) {
+                difmedio += fabs(C_new[i][j] - C[i][j]);
                 C[i][j] = C_new[i][j];
             }
         }
+
+        if ((t % 100) == 0)
+            printf("iteracao %d - diferenca=%g\n", t, difmedio / ((N-2) * (N-2)));
       }
     }
 }
@@ -35,7 +43,7 @@ int main() {
   printf("Concentração final no centro | ");
   printf("Tempo de processamento | ");
   printf("Numero de Threads\n");
-  for(int i = 0; i < 10; i++){
+  for(int i = 0; i < 11; i++){
     double C[N][N] = {0};      // Concentração inicial
     double C_new[N][N] = {0};  // Concentração para a próxima iteração
     double startTime, endTime;
@@ -52,7 +60,7 @@ int main() {
     printf("%f | ", C[N/2-2][N/2-2]);
     printf("%f | ", endTime-startTime);
     printf("%d\n", NThreads);
-    if(i == 9 && NThreads < 16){
+    if(i == 10 && NThreads < 16){
       i = 0;
       NThreads = NThreads * 2;
     }
