@@ -1,5 +1,6 @@
-# include <stdio.h>
-# include <omp.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
 #include <math.h>
 
 # define N 2000 // Tamanho da grade
@@ -10,7 +11,7 @@
 
 int NThreads = 2;
 
-void diff_eq(double C[N][N], double C_new[N][N]) {
+void diff_eq(double **C, double **C_new) {
     for (int t = 0; t < T; t++) {
       double difmedio = 0.0;
       #pragma omp parallel num_threads(NThreads)
@@ -41,30 +42,65 @@ void diff_eq(double C[N][N], double C_new[N][N]) {
 
 int main() {
   printf("Concentração final no centro | ");
-  printf("Tempo de processamento | ");
-  printf("Numero de Threads\n");
-  for(int i = 0; i < 11; i++){
-    double C[N][N] = {0};      // Concentração inicial
-    double C_new[N][N] = {0};  // Concentração para a próxima iteração
-    double startTime, endTime;
+    printf("Tempo de processamento | ");
+    printf("Numero de Threads\n");
+    
+        // Concentração inicial
+        double **C = (double **)malloc(N * sizeof(double *));
+        if (C == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+            return 1;
+        }
+    for(int i = 0; i <= 10; i++){
+        for (int i = 0; i < N; i++) {
+            C[i] = (double *)malloc(N * sizeof(double));
+            if (C[i] == NULL) {
+                fprintf(stderr, "Memory allocation failed\n");
+                return 1;
+            }
+        }
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+            C[i][j] = 0.;
+            }
+        }
+        
+        // Concentração para a próxima iteração
+        double **C_new = (double **)malloc(N * sizeof(double *));
+        if (C_new == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+            return 1;
+        }
+        for (int i = 0; i < N; i++) {
+            C_new[i] = (double *)malloc(N * sizeof(double));
+            if (C_new[i] == NULL) {
+                fprintf(stderr, "Memory allocation failed\n");
+                return 1;
+            }
+        }
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                C_new[i][j] = 0.;
+            }
+        }
+        double startTime, endTime;
 
-    // Inicializar uma concentração alta no centro
-    C[N/2][N/2] = 1.0;
+        // Inicializar uma concentração alta no centro
+        C[N/2][N/2] = 1.0;
 
-    // Executar a equação de difusão
-    startTime = omp_get_wtime();
-    diff_eq(C, C_new);
-    endTime = omp_get_wtime();
+        // Executar a equação de difusão
+        startTime = omp_get_wtime();
+        diff_eq(C, C_new);
+        endTime = omp_get_wtime();
 
-    // Exibir resultado para verificação
-    printf("%f | ", C[N/2-2][N/2-2]);
-    printf("%f | ", endTime-startTime);
-    printf("%d\n", NThreads);
-    if(i == 10 && NThreads < 16){
-      i = 0;
-      NThreads = NThreads * 2;
+        // Exibir resultado para verificação
+        printf("%f | ", C[N/2-2][N/2-2]);
+        printf("%f | ", endTime-startTime);
+        printf("%d\n", NThreads);
+        if(i == 10 && NThreads < 16){
+          i = 0;
+          NThreads = NThreads * 2;
+        }
     }
-  }
-
-  return 0;
+    return 0;
 }
