@@ -16,7 +16,6 @@ void diff_eq(double *C, double *C_new, int local_rows, int rank, int size) {
     for (int t = 0; t < T; t++) {
         double local_difmedio = 0.0, global_difmedio = 0.0;
 
-        // Comunicação MPI: Troca das linhas de borda com vizinhos
         if (rank > 0)
             MPI_Irecv(&C[0 * N], N, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, &recv_reqs[0]);
         if (rank < size - 1)
@@ -27,7 +26,6 @@ void diff_eq(double *C, double *C_new, int local_rows, int rank, int size) {
         if (rank < size - 1)
             MPI_Isend(&C[(local_rows - 2) * N], N, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, &send_reqs[1]);
 
-        // Computação da difusão para o núcleo interno (exceto as bordas)
         for (int i = 2; i < local_rows - 2; i++) {
             for (int j = 1; j < N - 1; j++) {
                 C_new[i * N + j] = C[i * N + j] + D * DELTA_T * (
@@ -39,11 +37,9 @@ void diff_eq(double *C, double *C_new, int local_rows, int rank, int size) {
             }
         }
 
-        // Aguarda recebimento das bordas antes de atualizar as bordas
         if (rank > 0) MPI_Wait(&recv_reqs[0], MPI_STATUS_IGNORE);
         if (rank < size - 1) MPI_Wait(&recv_reqs[1], MPI_STATUS_IGNORE);
 
-        // Atualização das linhas de borda
         for (int j = 1; j < N - 1; j++) {
             if (rank > 0) {
                 C_new[1 * N + j] = C[1 * N + j] + D * DELTA_T * (
@@ -62,20 +58,16 @@ void diff_eq(double *C, double *C_new, int local_rows, int rank, int size) {
             }
         }
 
-        // Aguarda envio das bordas antes de avançar
         if (rank > 0) MPI_Wait(&send_reqs[0], MPI_STATUS_IGNORE);
         if (rank < size - 1) MPI_Wait(&send_reqs[1], MPI_STATUS_IGNORE);
 
-        // Redução para calcular a diferença média total
         MPI_Reduce(&local_difmedio, &global_difmedio, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
         global_difmedio /= ((N - 2) * (N - 2)); // Normaliza a diferença média
 
-        // Troca as matrizes
         double *temp = C;
         C = C_new;
         C_new = temp;
 
-        // Impressão nas iterações específicas (0, 100, 200, 300, 400)
         if ((t == 0 || t == 100 || t == 200 || t == 300 || t == 400) && rank == 0) {
             printf("Iteração %d - Diferença Média: %g\n", t, global_difmedio);
         }

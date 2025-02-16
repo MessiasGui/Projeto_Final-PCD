@@ -25,12 +25,10 @@ void diff_eq(double **C, double **C_new) {
             }
         }
 
-        // Troca os ponteiros, em vez de copiar os valores
         double **temp = C;
         C = C_new;
         C_new = temp;
 
-        // Cálculo da diferença média para verificação de convergência
         difmedio = 0.0;
         #pragma omp parallel for num_threads(NThreads) collapse(2) reduction(+:difmedio)
         for (int i = 1; i < N - 1; i++) {
@@ -47,7 +45,6 @@ void diff_eq(double **C, double **C_new) {
 int main() {
     
     for (NThreads = 2; NThreads <= 16; NThreads *= 2) {  
-        // Alocação das matrizes
         double **C = (double **)malloc(N * sizeof(double *));
         double **C_new = (double **)malloc(N * sizeof(double *));
         if (C == NULL || C_new == NULL) {
@@ -89,7 +86,6 @@ int main() {
         printf("%f | ", endTime - startTime);
         printf("%d\n", NThreads);
 
-        // Libera memória
         for (int i = 0; i < N; i++) {
             free(C[i]);
             free(C_new[i]);
